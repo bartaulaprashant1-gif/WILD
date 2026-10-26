@@ -1,0 +1,13 @@
+
+{
+  "id": "forgotten-cellar",
+  "title": "The Forgotten Cellar",
+  "version": "1.0.0",
+  "startRoomId": "house-exterior",
+  "files": {
+    "rooms": "rooms.json",
+    "entities": "entities.json",
+    "rules": "rules.json",
+    "text": "text.json"
+  }
+}

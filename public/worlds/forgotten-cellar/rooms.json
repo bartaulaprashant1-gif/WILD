@@ -1,0 +1,37 @@
+
+[
+  {
+    "id": "house-exterior",
+    "name": "Outside the House",
+    "description": "An old house stands beneath a grey sky. A narrow path leads into the forest.",
+    "exits": {
+      "north": "forest-path",
+      "east": "living-room"
+    }
+  },
+  {
+    "id": "forest-path",
+    "name": "Forest Path",
+    "description": "Trees crowd around a winding path. The old house is behind you.",
+    "exits": {
+      "south": "house-exterior"
+    }
+  },
+  {
+    "id": "living-room",
+    "name": "Living Room",
+    "description": "Dust covers the furniture. A heavy wooden door leads down to a cellar.",
+    "exits": {
+      "west": "house-exterior",
+      "down": "cellar"
+    }
+  },
+  {
+    "id": "cellar",
+    "name": "Cellar",
+    "description": "The cellar is cold and dark. Shadows hide the far corners.",
+    "exits": {
+      "up": "living-room"
+    }
+  }
+]
