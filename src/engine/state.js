@@ -5,7 +5,7 @@ export function createInitialState(world) {
       entity.id,
       {
         location: entity.initialLocation,
-        properties: {}
+        properties: { ...(entity.initialProperties ?? {}) }
       }
     ])
   );

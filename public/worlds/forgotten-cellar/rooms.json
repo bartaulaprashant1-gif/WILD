@@ -24,7 +24,17 @@
     "exits": {
       "west": "house-exterior",
       "down": "cellar"
-    }
+    },
+    "exitRequirements": {
+    "down": [
+      {
+        "op": "entity-property-equals",
+        "entityId": "cellar-door",
+        "property": "unlocked",
+        "value": true
+      }
+    ]
+  }
   },
   {
     "id": "cellar",

@@ -1,4 +1,3 @@
-
 [
   {
     "id": "mailbox",
@@ -31,5 +30,16 @@
     "description": "An old oil lamp. It might still work.",
     "initialLocation": "cellar",
     "portable": true
+  },
+  {
+    "id": "cellar-door",
+    "name": "cellar door",
+    "aliases": ["door", "wooden door"],
+    "description": "A heavy wooden door. An old lock holds it shut.",
+    "initialLocation": "living-room",
+    "portable": false,
+    "initialProperties":{
+      "unlocked": false
+    }
   }
 ]

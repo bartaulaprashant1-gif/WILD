@@ -1,4 +1,6 @@
 
+import { evaluateConditions } from "./ruleEvaluator.js";
+
 export function movePlayer(world, state, direction) {
   const currentRoom = world.rooms.find(
     (room) => room.id === state.currentRoomId
@@ -25,6 +27,29 @@ export function movePlayer(world, state, direction) {
     };
   }
 
+  const requirements =
+    currentRoom.exitRequirements?.[normalizedDirection] ?? [];
+
+  const check = evaluateConditions(world, state, requirements);
+
+  if (!check.ok) {
+    return {
+      ok: false,
+      code: "INVALID_EXIT_RULE",
+      message: "This exit has an invalid rule.",
+      state
+    };
+  }
+
+  if (!check.passed) {
+    return {
+      ok: false,
+      code: "EXIT_BLOCKED",
+      message: "The way is blocked.",
+      state
+    };
+  }
+
   const destination = world.rooms.find(
     (room) => room.id === destinationId
   );
@@ -38,7 +63,6 @@ export function movePlayer(world, state, direction) {
     };
   }
 
-  // Produce a new state rather than mutating the old one.
   const visitedRoomIds = state.visitedRoomIds.includes(destinationId)
     ? state.visitedRoomIds
     : [...state.visitedRoomIds, destinationId];

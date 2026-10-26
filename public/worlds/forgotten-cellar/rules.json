@@ -1,0 +1,33 @@
+
+[
+  {
+    "id": "unlock-cellar-door",
+    "trigger": {
+      "type": "use",
+      "itemId": "rusty-key",
+      "targetId": "cellar-door"
+    },
+    "conditions": [
+      {
+        "op": "entity-location-is",
+        "entityId": "rusty-key",
+        "location": "inventory"
+      },
+      {
+        "op": "entity-property-equals",
+        "entityId": "cellar-door",
+        "property": "unlocked",
+        "value": false
+      }
+    ],
+    "effects": [
+      {
+        "op": "set-entity-property",
+        "entityId": "cellar-door",
+        "property": "unlocked",
+        "value": true
+      }
+    ],
+    "successMessage": "The rusty key turns with a grinding click. The cellar door unlocks."
+  }
+]
