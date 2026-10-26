@@ -1,0 +1,9 @@
+
+{
+  "intro": "You arrive at an abandoned house. Its secrets have waited here for years.",
+  "messages": {
+    "invalidDirection": "You cannot go that way.",
+    "unknownRoom": "The destination room does not exist.",
+    "worldLoadFailed": "The world could not be loaded."
+  }
+}

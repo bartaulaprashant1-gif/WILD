@@ -1,0 +1,35 @@
+
+[
+  {
+    "id": "mailbox",
+    "name": "mailbox",
+    "aliases": ["postbox"],
+    "description": "A weathered mailbox stands beside the house.",
+    "initialLocation": "house-exterior",
+    "portable": false
+  },
+  {
+    "id": "leaflet",
+    "name": "leaflet",
+    "aliases": ["paper", "pamphlet"],
+    "description": "A faded leaflet warns visitors to keep a light nearby.",
+    "initialLocation": "house-exterior",
+    "portable": true
+  },
+  {
+    "id": "rusty-key",
+    "name": "rusty key",
+    "aliases": ["key"],
+    "description": "An old iron key, stained with rust.",
+    "initialLocation": "living-room",
+    "portable": true
+  },
+  {
+    "id": "lamp",
+    "name": "lamp",
+    "aliases": ["lantern"],
+    "description": "An old oil lamp. It might still work.",
+    "initialLocation": "cellar",
+    "portable": true
+  }
+]
