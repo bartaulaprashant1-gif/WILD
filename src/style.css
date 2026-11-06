@@ -900,3 +900,46 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+
+
+/* Entity editor */
+
+.entity-section {
+  grid-column: 1 / -1;
+}
+
+.entity-editor {
+  margin-top: 24px;
+}
+
+.entity-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #14543d;
+  background: rgb(77 245 173 / 3%);
+  cursor: pointer;
+}
+
+.entity-checkbox input {
+  width: 17px;
+  height: 17px;
+  margin-top: 3px;
+  accent-color: var(--green);
+}
+
+.entity-checkbox span {
+  display: grid;
+  gap: 6px;
+}
+
+.entity-checkbox strong {
+  color: var(--green);
+}
+
+.entity-checkbox small {
+  color: var(--muted);
+  line-height: 1.5;
+}

@@ -7,6 +7,9 @@ import {
   deleteRoom,
   validateDraft,
   DIRECTIONS,
+  addEntity,
+  updateEntity,
+  deleteEntity,
 } from "./builder/worldDraft.js";
 
 const app = document.querySelector("#app");
@@ -21,6 +24,7 @@ const state = {
   builderDraft: createWorldDraft(),
   editingRoomId: "starting-room",
   builderNotice: "",
+  editingEntityId: null,
 };
 
 function escapeHTML(value = "") {
@@ -327,22 +331,57 @@ function renderRoomList() {
     .join("");
 }
 
+function renderEntityList() {
+  return state.builderDraft.entities
+    .map(
+      (entity) => `
+    <div class="builder-room-row">
+      <div>
+        <strong>${escapeHTML(entity.name)}</strong>
+        <p class="mono">${escapeHTML(entity.id)}</p>
+        <span class="room-badge">
+          ${entity.portable ? "PORTABLE" : "FIXED OBJECT"}
+        </span>
+      </div>
+
+      <div class="room-row-actions">
+        <button
+          class="btn btn-small"
+          data-action="edit-entity:${escapeHTML(entity.id)}"
+        >Edit</button>
+
+        <button
+          class="btn btn-small btn-danger"
+          data-action="delete-entity:${escapeHTML(entity.id)}"
+        >Delete</button>
+      </div>
+    </div>
+  `,
+    )
+    .join("");
+}
 
 function renderCreate() {
   const draft = state.builderDraft;
   const editingRoom =
-    draft.rooms.find((room) => room.id === state.editingRoomId)
-    ?? draft.rooms[0]
-    ?? null;
+    draft.rooms.find((room) => room.id === state.editingRoomId) ??
+    draft.rooms[0] ??
+    null;
+  const editingEntity =
+    draft.entities.find((entity) => entity.id === state.editingEntityId) ??
+    null;
 
   const validation = validateDraft(draft);
 
   renderShell(`
     <section class="page-heading">
-      <p class="eyebrow">CREATE / WORLD WORKSHOP</p>
-      <h1>Build Your World<span class="cursor">_</span></h1>
-      <p>Create a network of rooms for players to explore.</p>
-    </section>
+  <p class="eyebrow">CREATE / WORLD WORKSHOP</p>
+  <h1>${escapeHTML(draft.manifest.title)}<span class="cursor">_</span></h1>
+  <p>
+    WORLD ID:
+    <span class="mono">${escapeHTML(draft.manifest.id)}</span>
+  </p>
+</section>
 
     <div class="builder-workspace">
       <section class="panel builder-section">
@@ -385,14 +424,18 @@ function renderCreate() {
           <label class="builder-field">
             <span>STARTING ROOM</span>
             <select name="startRoomId" required>
-              ${draft.rooms.map((room) => `
+              ${draft.rooms
+                .map(
+                  (room) => `
                 <option
                   value="${escapeHTML(room.id)}"
                   ${draft.manifest.startRoomId === room.id ? "selected" : ""}
                 >
                   ${escapeHTML(room.name)}
                 </option>
-              `).join("")}
+              `,
+                )
+                .join("")}
             </select>
           </label>
 
@@ -427,7 +470,9 @@ function renderCreate() {
         </form>
       </section>
 
-      ${editingRoom ? `
+      ${
+        editingRoom
+          ? `
         <section class="panel builder-section room-editor">
           <p class="section-kicker">03 / ROOM EDITOR</p>
           <h2>Edit: ${escapeHTML(editingRoom.name)}</h2>
@@ -466,7 +511,7 @@ function renderCreate() {
               </p>
               <div class="exit-grid">
                 ${DIRECTIONS.map((direction) =>
-                  renderExitOptions(editingRoom, direction)
+                  renderExitOptions(editingRoom, direction),
                 ).join("")}
               </div>
             </div>
@@ -476,29 +521,167 @@ function renderCreate() {
             </button>
           </form>
         </section>
-      ` : ""}
+      `
+          : ""
+      }
+
+
+<section class="panel builder-section entity-section">
+  <p class="section-kicker">04 / ENTITIES</p>
+  <h2>Objects & Items</h2>
+  <p class="muted">
+    Add objects that players can discover, examine, collect, or interact with.
+  </p>
+
+  <div class="builder-room-list">
+    ${
+      renderEntityList() ||
+      `
+      <p class="muted">No entities created yet.</p>
+    `
+    }
+  </div>
+
+  <form id="add-entity-form" class="add-room-form">
+    <label class="builder-field">
+      <span>NEW ENTITY NAME</span>
+      <input
+        name="newEntityName"
+        required
+        maxlength="80"
+        placeholder="e.g. Rusty Key"
+      />
+    </label>
+    <button class="btn btn-wide" type="submit">+ Add Entity</button>
+  </form>
+
+  ${
+    editingEntity
+      ? `
+    <div class="entity-editor">
+      <div class="panel-divider"></div>
+      <p class="section-kicker">ENTITY EDITOR</p>
+      <h2>${escapeHTML(editingEntity.name)}</h2>
+
+      <form id="entity-editor-form" class="builder-form">
+        <input
+          type="hidden"
+          name="entityId"
+          value="${escapeHTML(editingEntity.id)}"
+        />
+
+        <label class="builder-field">
+          <span>ENTITY NAME</span>
+          <input
+            name="entityName"
+            required
+            maxlength="80"
+            value="${escapeHTML(editingEntity.name)}"
+          />
+        </label>
+
+        <label class="builder-field">
+          <span>DESCRIPTION</span>
+          <textarea
+            name="entityDescription"
+            rows="3"
+            required
+            maxlength="2000"
+          >${escapeHTML(editingEntity.description)}</textarea>
+        </label>
+
+        <label class="builder-field">
+          <span>INITIAL LOCATION</span>
+          <select name="initialLocation" required>
+            ${draft.rooms
+              .map(
+                (room) => `
+              <option
+                value="${escapeHTML(room.id)}"
+                ${editingEntity.initialLocation === room.id ? "selected" : ""}
+              >
+                ${escapeHTML(room.name)}
+              </option>
+            `,
+              )
+              .join("")}
+          </select>
+        </label>
+
+        <label class="builder-field">
+          <span>ALIASES</span>
+          <input
+            name="aliases"
+            value="${escapeHTML(editingEntity.aliases.join(", "))}"
+            placeholder="old key, iron key"
+          />
+          <small>Separate alternative names with commas.</small>
+        </label>
+
+        <label class="builder-field">
+          <span>INITIAL PROPERTIES (JSON)</span>
+          <textarea
+            name="initialProperties"
+            rows="4"
+            spellcheck="false"
+          >${escapeHTML(JSON.stringify(editingEntity.initialProperties, null, 2))}</textarea>
+          <small>
+            Example: {"locked": false, "weight": 5}
+          </small>
+        </label>
+
+        <label class="entity-checkbox">
+          <input
+            type="checkbox"
+            name="portable"
+            ${editingEntity.portable ? "checked" : ""}
+          />
+          <span>
+            <strong>Portable object</strong>
+            <small>Allow the player to take this object into their inventory.</small>
+          </span>
+        </label>
+
+        <button class="btn btn-primary" type="submit">
+          Save Entity
+        </button>
+      </form>
+    </div>
+  `
+      : ""
+  }
+</section>
+
 
       <section class="panel builder-section">
         <p class="section-kicker">04 / VALIDATION</p>
         <h2>World Check</h2>
 
         <p class="${validation.ok ? "validation-ok" : "validation-error"}">
-          ${validation.ok
-            ? "✓ Your current room structure is valid."
-            : "⚠ Fix the following issues before continuing:"}
+          ${
+            validation.ok
+              ? "✓ Your current room structure is valid."
+              : "⚠ Fix the following issues before continuing:"
+          }
         </p>
 
-        ${validation.errors.length ? `
+        ${
+          validation.errors.length
+            ? `
           <ul class="validation-list">
-            ${validation.errors.map((error) =>
-              `<li>${escapeHTML(error)}</li>`
-            ).join("")}
+            ${validation.errors
+              .map((error) => `<li>${escapeHTML(error)}</li>`)
+              .join("")}
           </ul>
-        ` : ""}
+        `
+            : ""
+        }
 
-        ${state.builderNotice
-          ? `<p class="builder-notice">${escapeHTML(state.builderNotice)}</p>`
-          : ""}
+        ${
+          state.builderNotice
+            ? `<p class="builder-notice">${escapeHTML(state.builderNotice)}</p>`
+            : ""
+        }
 
         <div class="world-summary">
           <span>ROOMS <strong>${draft.rooms.length}</strong></span>
@@ -618,32 +801,53 @@ app.addEventListener("click", async (event) => {
 
   const action = target.dataset.action;
 
-
-if (action.startsWith("edit-room:")) {
-  state.editingRoomId = action.slice("edit-room:".length);
-  state.builderNotice = "";
-  renderCreate();
-  return;
-}
-
-if (action.startsWith("delete-room:")) {
-  const roomId = action.slice("delete-room:".length);
-
-  if (state.builderDraft.rooms.length > 1) {
-    state.builderDraft = deleteRoom(state.builderDraft, roomId);
-
-    if (state.editingRoomId === roomId) {
-      state.editingRoomId =
-        state.builderDraft.manifest.startRoomId;
-    }
-
-    state.builderNotice = "Room deleted. Any exits pointing to it were removed.";
+  if (action.startsWith("edit-room:")) {
+    state.editingRoomId = action.slice("edit-room:".length);
+    state.builderNotice = "";
+    renderCreate();
+    return;
   }
 
-  renderCreate();
-  return;
-}
+  if (action.startsWith("delete-room:")) {
+    const roomId = action.slice("delete-room:".length);
 
+    if (state.builderDraft.rooms.length > 1) {
+      state.builderDraft = deleteRoom(state.builderDraft, roomId);
+
+      if (state.editingRoomId === roomId) {
+        state.editingRoomId = state.builderDraft.manifest.startRoomId;
+      }
+
+      state.builderNotice =
+        "Room deleted. Any exits pointing to it were removed.";
+    }
+
+    renderCreate();
+    return;
+  }
+
+  if (action.startsWith("edit-entity:")) {
+    state.editingEntityId = action.slice("edit-entity:".length);
+    state.builderNotice = "";
+    renderCreate();
+    return;
+  }
+
+  if (action.startsWith("delete-entity:")) {
+    const entityId = action.slice("delete-entity:".length);
+
+    state.builderDraft = deleteEntity(state.builderDraft, entityId);
+
+    if (state.editingEntityId === entityId) {
+      state.editingEntityId = null;
+    }
+
+    state.builderNotice =
+      "Entity deleted. Any rules referencing it will need attention.";
+
+    renderCreate();
+    return;
+  }
 
   if (action === "start-game") {
     await startGame();
@@ -659,7 +863,6 @@ if (action.startsWith("delete-room:")) {
     render();
   }
 });
-
 
 app.addEventListener("submit", (event) => {
   const form = event.target;
@@ -710,13 +913,13 @@ app.addEventListener("submit", (event) => {
     if (!name) return;
 
     const previousRoomIds = new Set(
-      state.builderDraft.rooms.map((room) => room.id)
+      state.builderDraft.rooms.map((room) => room.id),
     );
 
     state.builderDraft = addRoom(state.builderDraft, name);
 
     const newRoom = state.builderDraft.rooms.find(
-      (room) => !previousRoomIds.has(room.id)
+      (room) => !previousRoomIds.has(room.id),
     );
 
     state.editingRoomId = newRoom.id;
@@ -739,25 +942,116 @@ app.addEventListener("submit", (event) => {
     const exits = {};
 
     for (const direction of DIRECTIONS) {
-      const destinationId = String(
-        data.get(`exit-${direction}`) ?? ""
-      );
+      const destinationId = String(data.get(`exit-${direction}`) ?? "");
 
       if (destinationId) {
         exits[direction] = destinationId;
       }
     }
 
-    state.builderDraft = updateRoom(
-      state.builderDraft,
-      roomId,
-      { name, description, exits }
-    );
+    state.builderDraft = updateRoom(state.builderDraft, roomId, {
+      name,
+      description,
+      exits,
+    });
 
     state.builderNotice = "Room saved.";
     renderCreate();
   }
-});
 
+if (form.id === "add-entity-form") {
+  const name = String(data.get("newEntityName") ?? "").trim();
+  if (!name) return;
+
+  const previousIds = new Set(
+    state.builderDraft.entities.map((entity) => entity.id)
+  );
+
+  state.builderDraft = addEntity(state.builderDraft, name);
+
+  const newEntity = state.builderDraft.entities.find(
+    (entity) => !previousIds.has(entity.id)
+  );
+
+  state.editingEntityId = newEntity.id;
+  state.builderNotice = `Entity "${name}" added.`;
+  renderCreate();
+  return;
+}
+
+if (form.id === "entity-editor-form") {
+  const entityId = String(data.get("entityId") ?? "");
+  const name = String(data.get("entityName") ?? "").trim();
+  const description = String(
+    data.get("entityDescription") ?? ""
+  ).trim();
+
+  const initialLocation = String(
+    data.get("initialLocation") ?? ""
+  );
+
+  const aliases = String(data.get("aliases") ?? "")
+    .split(",")
+    .map((alias) => alias.trim())
+    .filter(Boolean);
+
+  const portable = data.get("portable") === "on";
+
+  let initialProperties;
+
+  try {
+    initialProperties = JSON.parse(
+      String(data.get("initialProperties") ?? "{}")
+    );
+
+    if (
+      !initialProperties ||
+      typeof initialProperties !== "object" ||
+      Array.isArray(initialProperties)
+    ) {
+      throw new Error("Properties must be a JSON object.");
+    }
+  } catch (error) {
+    state.builderNotice =
+      `Invalid properties JSON: ${error.message}`;
+    renderCreate();
+    return;
+  }
+
+  if (!name || !description) {
+    state.builderNotice =
+      "Entity name and description are required.";
+    renderCreate();
+    return;
+  }
+
+  if (!state.builderDraft.rooms.some(
+    (room) => room.id === initialLocation
+  )) {
+    state.builderNotice =
+      "Select a valid initial room.";
+    renderCreate();
+    return;
+  }
+
+  state.builderDraft = updateEntity(
+    state.builderDraft,
+    entityId,
+    {
+      name,
+      description,
+      initialLocation,
+      portable,
+      aliases,
+      initialProperties,
+    }
+  );
+
+  state.builderNotice = "Entity saved successfully.";
+  renderCreate();
+  return;
+}
+
+});
 
 render();
