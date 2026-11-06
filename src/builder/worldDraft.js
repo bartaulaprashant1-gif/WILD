@@ -56,7 +56,8 @@ export function createUniqueRoomId(name, rooms) {
 export function validateDraft(draft) {
   const errors = [];
   const roomIds = new Set();
-  const entityIds=new Set()
+  const entityIds=new Set();
+  const ruleIds=new Set();
 
   if (!draft.manifest.id.trim()) {
     errors.push("World ID is required.");
@@ -90,7 +91,7 @@ export function validateDraft(draft) {
       errors.push(`Room "${room.id}" needs a description.`);
     }
   }
-
+  
   if (!roomIds.has(draft.manifest.startRoomId)) {
     errors.push("Choose a valid starting room.");
   }
@@ -154,6 +155,43 @@ export function validateDraft(draft) {
     }
   }
 
+  for (const rule of draft.rules) {
+  if (!rule.id) {
+    errors.push("Every rule must have an ID.");
+    continue;
+  }
+
+  if (ruleIds.has(rule.id)) {
+    errors.push(`Duplicate rule ID: "${rule.id}".`);
+  }
+
+  ruleIds.add(rule.id);
+
+  if (rule.trigger?.type !== "use") {
+    errors.push(`Rule "${rule.id}" has an unsupported trigger type.`);
+  }
+
+  if (!rule.trigger?.itemId || !entityIds.has(rule.trigger.itemId)) {
+    errors.push(`Rule "${rule.id}" references a nonexistent trigger item.`);
+  }
+
+  if (!rule.trigger?.targetId || !entityIds.has(rule.trigger.targetId)) {
+    errors.push(`Rule "${rule.id}" references a nonexistent trigger target.`);
+  }
+
+  if (!Array.isArray(rule.conditions)) {
+    errors.push(`Rule "${rule.id}" conditions must be an array.`);
+  }
+
+  if (!Array.isArray(rule.effects)) {
+    errors.push(`Rule "${rule.id}" effects must be an array.`);
+  }
+
+  if (typeof rule.successMessage !== "string" || !rule.successMessage.trim()) {
+    errors.push(`Rule "${rule.id}" needs a success message.`);
+  }
+}
+
   return {
     ok: errors.length === 0,
     errors,
@@ -211,6 +249,58 @@ export function deleteRoom(draft, roomId) {
           ? rooms[0]?.id ?? ""
           : draft.manifest.startRoomId,
     },
+  };
+}
+
+export function createUniqueRuleId(name, rules) {
+  const base = slugify(name) || "new-rule";
+  const existingIds = new Set(rules.map((rule) => rule.id));
+
+  if (!existingIds.has(base)) return base;
+
+  let suffix = 2;
+
+  while (existingIds.has(`${base}-${suffix}`)) {
+    suffix++;
+  }
+
+  return `${base}-${suffix}`;
+}
+
+export function addRule(draft, name = "New Rule") {
+  const rule = {
+    id: createUniqueRuleId(name, draft.rules),
+    trigger: {
+      type: "use",
+      itemId: "",
+      targetId: "",
+    },
+    conditions: [],
+    effects: [],
+    successMessage: "Something happens.",
+  };
+
+  return {
+    ...draft,
+    rules: [...draft.rules, rule],
+  };
+}
+
+export function updateRule(draft, ruleId, updates) {
+  return {
+    ...draft,
+    rules: draft.rules.map((rule) =>
+      rule.id === ruleId
+        ? { ...rule, ...updates }
+        : rule
+    ),
+  };
+}
+
+export function deleteRule(draft, ruleId) {
+  return {
+    ...draft,
+    rules: draft.rules.filter((rule) => rule.id !== ruleId),
   };
 }
 
