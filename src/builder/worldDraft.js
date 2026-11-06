@@ -56,6 +56,7 @@ export function createUniqueRoomId(name, rooms) {
 export function validateDraft(draft) {
   const errors = [];
   const roomIds = new Set();
+  const entityIds=new Set()
 
   if (!draft.manifest.id.trim()) {
     errors.push("World ID is required.");
@@ -105,6 +106,51 @@ export function validateDraft(draft) {
           `Room "${room.id}" points ${direction} to missing room "${destinationId}".`
         );
       }
+    }
+  }
+
+  for (const entity of draft.entities) {
+    if (!entity.id) {
+      errors.push("Every entity must have an ID.");
+      continue;
+    }
+
+    if (entityIds.has(entity.id)) {
+      errors.push(`Duplicate entity ID: "${entity.id}".`);
+    }
+
+    entityIds.add(entity.id);
+
+    if (!entity.name.trim()) {
+      errors.push(`Entity "${entity.id}" needs a name.`);
+    }
+
+    if (!entity.description.trim()) {
+      errors.push(`Entity "${entity.id}" needs a description.`);
+    }
+
+    if (!roomIds.has(entity.initialLocation)) {
+      errors.push(
+        `Entity "${entity.id}" starts in a nonexistent room.`
+      );
+    }
+
+    if (typeof entity.portable !== "boolean") {
+      errors.push(`Entity "${entity.id}" needs a valid portable setting.`);
+    }
+
+    if (!Array.isArray(entity.aliases)) {
+      errors.push(`Entity "${entity.id}" aliases must be an array.`);
+    }
+
+    if (
+      !entity.initialProperties ||
+      typeof entity.initialProperties !== "object" ||
+      Array.isArray(entity.initialProperties)
+    ) {
+      errors.push(
+        `Entity "${entity.id}" properties must be a JSON object.`
+      );
     }
   }
 
@@ -165,6 +211,60 @@ export function deleteRoom(draft, roomId) {
           ? rooms[0]?.id ?? ""
           : draft.manifest.startRoomId,
     },
+  };
+}
+
+export function createUniqueEntityId(name, entities) {
+  const base = slugify(name) || "new-entity";
+  const existingIds = new Set(entities.map((entity) => entity.id));
+
+  if (!existingIds.has(base)) return base;
+
+  let suffix = 2;
+
+  while (existingIds.has(`${base}-${suffix}`)) {
+    suffix++;
+  }
+
+  return `${base}-${suffix}`;
+}
+
+export function addEntity(draft, name = "New Object") {
+  const entity = {
+    id: createUniqueEntityId(name, draft.entities),
+    name,
+    description: "Describe this object.",
+    initialLocation: draft.manifest.startRoomId,
+    portable: true,
+    aliases: [],
+    initialProperties: {},
+  };
+
+  return {
+    ...draft,
+    entities: [...draft.entities, entity],
+  };
+}
+
+export function updateEntity(draft, entityId, updates) {
+  return {
+    ...draft,
+    entities: draft.entities.map((entity) =>
+      entity.id === entityId
+        ? { ...entity, ...updates }
+        : entity
+    ),
+  };
+}
+
+export function deleteEntity(draft, entityId) {
+  return {
+    ...draft,
+    entities: draft.entities.filter(
+      (entity) => entity.id !== entityId
+    ),
+    // Rules referencing this entity will be removed in the
+    // rule-editor stage, where we can validate those references.
   };
 }
 
