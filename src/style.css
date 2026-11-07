@@ -943,3 +943,18 @@ button:disabled {
   color: var(--muted);
   line-height: 1.5;
 }
+
+
+
+.rule-section {
+  grid-column: 1 / -1;
+}
+
+.rule-editor {
+  margin-top: 24px;
+}
+
+.rule-editor textarea {
+  resize: vertical;
+  min-height: 90px;
+}

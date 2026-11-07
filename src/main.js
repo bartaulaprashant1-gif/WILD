@@ -10,6 +10,9 @@ import {
   addEntity,
   updateEntity,
   deleteEntity,
+  addRule,
+  updateRule,
+  deleteRule,
 } from "./builder/worldDraft.js";
 
 const app = document.querySelector("#app");
@@ -25,6 +28,7 @@ const state = {
   editingRoomId: "starting-room",
   builderNotice: "",
   editingEntityId: null,
+  editingRuleId:null
 };
 
 function escapeHTML(value = "") {
@@ -330,6 +334,47 @@ function renderRoomList() {
     )
     .join("");
 }
+function renderRuleList() {
+  const rules = state.builderDraft.rules;
+
+  if (!rules.length) {
+    return `
+      <p class="empty-state">
+        No rules created yet. Add a rule to define how your world responds to player actions.
+      </p>
+    `;
+  }
+
+  return rules.map((rule) => `
+    <article class="builder-item">
+      <div class="builder-item-info">
+        <strong>${escapeHTML(rule.id)}</strong>
+        <small>
+          Use:
+          ${escapeHTML(rule.trigger.itemId || "No item")}
+          →
+          ${escapeHTML(rule.trigger.targetId || "No target")}
+        </small>
+      </div>
+
+      <div class="builder-item-actions">
+        <button
+          class="button button-small"
+          data-action="edit-rule:${escapeHTML(rule.id)}"
+        >
+          Edit
+        </button>
+
+        <button
+          class="button button-small button-danger"
+          data-action="delete-rule:${escapeHTML(rule.id)}"
+        >
+          Delete
+        </button>
+      </div>
+    </article>
+  `).join("");
+}
 
 function renderEntityList() {
   return state.builderDraft.entities
@@ -367,6 +412,21 @@ function renderCreate() {
     draft.rooms.find((room) => room.id === state.editingRoomId) ??
     draft.rooms[0] ??
     null;
+  const editingRule = draft.rules.find(
+  (rule) => rule.id === state.editingRuleId
+) ?? null;
+
+const ruleEntityOptions = (selectedId) => `
+  <option value="">Select an entity</option>
+  ${draft.entities.map((entity) => `
+    <option
+      value="${escapeHTML(entity.id)}"
+      ${entity.id === selectedId ? "selected" : ""}
+    >
+      ${escapeHTML(entity.name)} (${escapeHTML(entity.id)})
+    </option>
+  `).join("")}
+`;  
   const editingEntity =
     draft.entities.find((entity) => entity.id === state.editingEntityId) ??
     null;
@@ -653,6 +713,97 @@ function renderCreate() {
 </section>
 
 
+<section class="builder-section rule-section">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">WORLD LOGIC</p>
+      <h2>Puzzle Rules</h2>
+      <p>
+        Define how objects interact and how the world responds to player actions.
+      </p>
+    </div>
+  </div>
+
+  <div class="builder-list">
+    ${renderRuleList()}
+  </div>
+
+  <form id="add-rule-form" class="inline-form">
+    <label>
+      New rule name
+      <input
+        type="text"
+        name="name"
+        placeholder="e.g. Unlock Cellar Door"
+        required
+      />
+    </label>
+
+    <button type="submit" class="button">
+      + Add Rule
+    </button>
+  </form>
+
+  ${editingRule ? `
+    <div class="entity-editor rule-editor">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">EDITING RULE</p>
+          <h3>${escapeHTML(editingRule.id)}</h3>
+        </div>
+      </div>
+
+      <form id="rule-editor-form" class="builder-form">
+        <input
+          type="hidden"
+          name="id"
+          value="${escapeHTML(editingRule.id)}"
+        />
+
+        <label>
+          Trigger item
+          <select name="itemId" required>
+            ${ruleEntityOptions(editingRule.trigger.itemId)}
+          </select>
+          <small>The object the player will use.</small>
+        </label>
+
+        <label>
+          Target entity
+          <select name="targetId" required>
+            ${ruleEntityOptions(editingRule.trigger.targetId)}
+          </select>
+          <small>The object the player will use the item on.</small>
+        </label>
+
+        <label>
+          Success message
+          <textarea
+            name="successMessage"
+            rows="3"
+            required
+          >${escapeHTML(editingRule.successMessage)}</textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="button">
+            Save Rule
+          </button>
+
+          <button
+            type="button"
+            class="button button-secondary"
+            data-action="cancel-rule-edit"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  ` : ""}
+</section>
+
+
       <section class="panel builder-section">
         <p class="section-kicker">04 / VALIDATION</p>
         <h2>World Check</h2>
@@ -848,6 +999,32 @@ app.addEventListener("click", async (event) => {
     renderCreate();
     return;
   }
+  if (action.startsWith("edit-rule:")) {
+  state.editingRuleId = action.slice("edit-rule:".length);
+  state.builderNotice = "";
+  renderCreate();
+  return;
+}
+
+if (action.startsWith("delete-rule:")) {
+  const ruleId = action.slice("delete-rule:".length);
+
+  state.builderDraft = deleteRule(state.builderDraft, ruleId);
+
+  if (state.editingRuleId === ruleId) {
+    state.editingRuleId = null;
+  }
+
+  state.builderNotice = "Rule deleted.";
+  renderCreate();
+  return;
+}
+
+if (action === "cancel-rule-edit") {
+  state.editingRuleId = null;
+  renderCreate();
+  return;
+}
 
   if (action === "start-game") {
     await startGame();
@@ -1048,6 +1225,71 @@ if (form.id === "entity-editor-form") {
   );
 
   state.builderNotice = "Entity saved successfully.";
+  renderCreate();
+  return;
+}
+
+if (event.target.id === "add-rule-form") {
+  event.preventDefault();
+
+  const data = new FormData(event.target);
+  const name = String(data.get("name") || "").trim();
+
+  if (!name) return;
+
+  const previousIds = new Set(
+    state.builderDraft.rules.map((rule) => rule.id)
+  );
+
+  state.builderDraft = addRule(state.builderDraft, name);
+
+  const newRule = state.builderDraft.rules.find(
+    (rule) => !previousIds.has(rule.id)
+  );
+
+  state.editingRuleId = newRule?.id ?? null;
+  state.builderNotice = "Rule created. Configure its trigger below.";
+
+  renderCreate();
+  return;
+}
+
+if (event.target.id === "rule-editor-form") {
+  event.preventDefault();
+
+  const data = new FormData(event.target);
+
+  const ruleId = String(data.get("id") || "");
+  const itemId = String(data.get("itemId") || "");
+  const targetId = String(data.get("targetId") || "");
+  const successMessage = String(data.get("successMessage") || "").trim();
+
+  const entityIds = new Set(
+    state.builderDraft.entities.map((entity) => entity.id)
+  );
+
+  if (!entityIds.has(itemId) || !entityIds.has(targetId)) {
+    state.builderNotice = "Select valid trigger entities.";
+    renderCreate();
+    return;
+  }
+
+  if (!successMessage) {
+    state.builderNotice = "A success message is required.";
+    renderCreate();
+    return;
+  }
+
+  state.builderDraft = updateRule(state.builderDraft, ruleId, {
+    trigger: {
+      type: "use",
+      itemId,
+      targetId,
+    },
+    successMessage,
+  });
+
+  state.builderNotice = "Rule saved successfully.";
   renderCreate();
   return;
 }
